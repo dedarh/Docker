@@ -1,0 +1,64 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@2.23">
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+      <triggers>
+        <hudson.triggers.SCMTrigger>
+          <spec>* * * * *</spec>
+          <ignorePostCommitHooks>false</ignorePostCommitHooks>
+        </hudson.triggers.SCMTrigger>
+      </triggers>
+    </org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.54">
+    <script> def notify(status){
+        emailext (
+          to: &quot;Artem@gmail.com&quot;,
+          from: &quot;Artem&quot;,
+          subject: &quot;${status}: Job &apos;${env.JOB_NAME} [${env.BUILD_NUMBER}]&apos;&quot;,
+          body: &quot;&quot;&quot;&lt;p&gt;${status}: Job &apos;${env.JOB_NAME} [${env.BUILD_NUMBER}]&apos;:&lt;/p&gt;
+            &lt;p&gt;Check console output at &lt;a href=&apos;${env.BUILD_URL}&apos;&gt;${env.JOB_NAME} [${env.BUILD_NUMBER}]&lt;/a&gt;&lt;/p&gt;&quot;&quot;&quot;,
+        )
+    }
+    
+node {
+    try{
+    node {
+        notify(&quot;Start&quot;)
+        try{
+            stage(&apos;checkout&apos;) {
+               git &apos;https://github.com/g0t4/jenkins2-course-spring-boot.git&apos;
+            }
+            def project_path = &quot;spring-boot-samples/spring-boot-sample-atmosphere&quot;
+            dir(project_path) {
+                stage(&apos;compile, testing, package&apos;) {
+                       sh &apos;mvn clean package&apos;
+                }
+                stage(&apos;archive&apos;) {
+                    archiveArtifacts &quot;target/*.jar&quot;
+                }
+            }
+            notify(&quot;Success&quot;)
+        }catch (err) {
+            notify(&quot;Error ${err}&quot;)
+            currentBuild.result = &apos;FAILURE&apos;
+        }
+        
+    }
+    } catch (err) {
+        echo &quot;Caught: ${err}&quot;
+        currentBuild.result = &apos;FAILURE&apos;
+    }
+}
+
+
+
+
+</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <disabled>false</disabled>
+</flow-definition>
